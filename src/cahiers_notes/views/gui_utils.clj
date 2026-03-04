@@ -1,6 +1,7 @@
 (ns cahiers-notes.views.gui-utils 
   (:import
-   [java.awt GraphicsEnvironment]))
+   [java.awt GraphicsEnvironment]
+   [java.time LocalDateTime]))
 
 (defn calculate-frame-location
   "Calculate absolute x, y coordinates to place the frame approximately.
@@ -14,3 +15,6 @@
         y (/ (- height frame-height) 2)] 
     (println "overall w and h" width height)
     {:x x :y y}))
+
+(defn timestamp []
+  (.toString (LocalDateTime/now)))

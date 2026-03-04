@@ -1,9 +1,17 @@
 (ns cahiers-notes.views.main-view
+  (:require
+   [cahiers-notes.views.gui-utils :as utils])
   (:import
-   [java.awt Color BorderLayout Dimension FlowLayout]
+   [java.awt
+    BorderLayout
+    Color
+    Dimension
+    FlowLayout]
    [java.awt.event ActionListener]
    [javax.swing
     BorderFactory
+    BoxLayout
+    JButton
     JFrame
     JLabel
     JMenu
@@ -11,8 +19,7 @@
     JMenuItem
     JPanel
     JSeparator]
-   [javax.swing.border EmptyBorder])
-  (:require [cahiers-notes.views.gui-utils :as utils]))
+   [javax.swing.border EmptyBorder]))
 
 (def TITLE "Cahiers")
 (def FRAME-WIDTH 1000)
@@ -26,8 +33,8 @@
 
 ;; TODO: this may be a generic action listener suitable for all widgets ...
 (defn add-action-listener
-   [menu-item callback]
-   (.addActionListener menu-item (reify ActionListener (actionPerformed [_ _] (callback)))))
+  [widget callback]
+  (.addActionListener widget (reify ActionListener (actionPerformed [_ _] (callback)))))
 
 (defn close-app
   [frame]
@@ -49,6 +56,49 @@
 
     ;(add-listener-to-menu file-exit demo-menu-action)))
     (add-action-listener file-exit #(close-app frame))))
+
+
+(defn fill-docs-panel [docs-panel]
+  (.removeAll docs-panel)
+  (let [label (JLabel. (utils/timestamp))]
+    (doto docs-panel
+      (.add label)
+      (.revalidate)
+      (.repaint))))
+
+(defn fill-pages-panel [pages-panel docs-panel]
+  (.removeAll pages-panel)
+  (let [label (JLabel. (utils/timestamp))
+        button (JButton. "Click")]
+    (. button addActionListener
+       (reify ActionListener
+         (actionPerformed [_ _]
+           (fill-pages-panel pages-panel docs-panel))))
+    (fill-docs-panel docs-panel)
+    (doto pages-panel
+      (.add label)
+      (.add button)
+      (.revalidate)
+      (.repaint))))
+
+(defn fill-cahiers-panel [cahiers-panel pages-panel docs-panel]
+  (.removeAll cahiers-panel)
+  (let [label (JLabel. (utils/timestamp))
+        button (JButton. "Click")]
+    (. button addActionListener
+       (reify ActionListener
+         (actionPerformed [_ _]
+           (fill-cahiers-panel cahiers-panel pages-panel docs-panel))))
+    (fill-pages-panel pages-panel docs-panel)
+    (doto cahiers-panel
+      (.add label)
+      (.add button)
+      (.revalidate)
+      (.repaint))))
+
+
+
+  ;(.add cahiers-frame (JLabel. timestamp))
 
 (defn create-and-show-gui
   "Build and display the view"
@@ -74,11 +124,14 @@
     (.setLayout left-container (BorderLayout.))
 
     (doto cahiers-panel
+      (.setLayout (BoxLayout. cahiers-panel BoxLayout/PAGE_AXIS));)
       (.setBackground Color/YELLOW)
       (.setPreferredSize (Dimension. CAHIER_WIDTH (.height (.getPreferredSize cahiers-panel))))
-      (.setBorder (BorderFactory/createLineBorder Color/BLACK))
-      (.add (JLabel. "CAHIERS")))
+      (.setBorder (BorderFactory/createLineBorder Color/BLACK)))
+      ;(.add (JLabel. "CAHIERS"))
+      ;(.add button-cahier))    
     (.add left-container cahiers-panel BorderLayout/WEST)
+
 
     (doto pages-panel
       (.setBackground Color/LIGHT_GRAY)
@@ -91,6 +144,10 @@
       (.setBackground Color/ORANGE)
       (.add (JLabel. "DOCS")))
     (.add main-panel docs-panel FlowLayout/CENTER)
+
+    
+    (fill-cahiers-panel cahiers-panel pages-panel docs-panel)
+
 
     (add-menus frame)
 
