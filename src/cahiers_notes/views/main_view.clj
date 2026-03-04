@@ -22,9 +22,12 @@
     JMenuItem
     JPanel
     JScrollPane
-    JSeparator]
-   [javax.swing.event ListSelectionListener]
-   [javax.swing.border EmptyBorder]))
+    JSeparator
+    JTextPane
+    ListCellRenderer
+    SwingConstants]
+   [javax.swing.border EmptyBorder]
+   [javax.swing.event ListSelectionListener]))
 
 (def TITLE "Cahiers")
 (def FRAME-WIDTH 1000)
@@ -34,6 +37,34 @@
 (def FRAME_BG_COLOR (Color. 206 187 66))
 
 (def gui (atom {:doc-panel nil :notes-panel nil}))
+
+(defn title-for-item
+  "Given a map (or any object), return the string that should appear in the list.
+   If the item is a map with a `:name` key we use that, otherwise we fall back
+   to `str` so the renderer never crashes."
+  [item]
+  (if (map? item)
+    (or (:title item) (str item))
+    (str item)))
+
+(defn title-list-renderer
+  "Creates a ListCellRenderer that shows only the `:name` value of each map."
+  []
+  (reify ListCellRenderer
+    (getListCellRendererComponent [_ list value index selected? focused?]
+      ;; Use a plain JLabel (the default renderer) but replace its text.
+      (let [label (javax.swing.DefaultListCellRenderer.)]
+        (.setText label (title-for-item value))
+        ;; Preserve the usual selection/background handling
+        (when selected?
+          (.setBackground label (.getSelectionBackground list))
+          (.setForeground label (.getSelectionForeground list)))
+        (when (not selected?)
+          (.setBackground label (.getBackground list))
+          (.setForeground label (.getForeground list)))
+        (.setEnabled label (.isEnabled list))
+        (.setOpaque label true)
+        label))))
 
 (defn add-listbox-listener [listbox callback]
   (.addListSelectionListener
@@ -71,29 +102,39 @@
 (defn fill-docs-panel [docs-panel pagelist]
   (.removeAll docs-panel)
   (let [selected-page (.getSelectedValue pagelist)
-        label (JLabel. (if (nil? selected-page) "Aucune page sélectionnée" (str "PAGE: " selected-page)))]
+        label (JLabel. (if (nil? selected-page) "Aucune page sélectionnée" (str "PAGE: " (:title selected-page))))
+        textPane (JTextPane.)
+        contents (if (nil? selected-page) "" (:content selected-page))]
     (println "docspanel" selected-page)
+
+    (doto textPane
+      (.setText contents)
+      (.setEditable false))
+    
     (doto docs-panel
-      (.add label)
+      (.setLayout (BorderLayout.))
+      (.add textPane BorderLayout/CENTER)
       (.revalidate)
       (.repaint))))
 
 (defn fill-pages-panel [pages-panel docs-panel listbox]
   (.removeAll pages-panel)
   (let [selected-book (.getSelectedValue listbox)
-        pages (data/pages-for-book selected-book)
+        pages (data/pages-for-book-title selected-book)
         model (DefaultListModel.)
         pagelist (JList. model)
         label (JLabel. (if (nil? selected-book) "NO SELECTED BOOK" (str "Books for " selected-book)))]
-    
+
+    (.setCellRenderer pagelist (title-list-renderer))
+
     (doseq [page pages]
-      (.addElement model page))    
+      (.addElement model page))
     (add-listbox-listener
      pagelist
      #(fill-docs-panel docs-panel pagelist))
-    
+
     (fill-docs-panel docs-panel pagelist)
-    
+
     (doto pages-panel
       (.add label)
       (.add (JScrollPane. pagelist))
