@@ -1,5 +1,6 @@
 (ns cahiers-notes.views.main-view
   (:require
+   [cahiers-notes.data :as data]
    [cahiers-notes.views.gui-utils :as utils])
   (:import
    [java.awt
@@ -11,14 +12,18 @@
    [javax.swing
     BorderFactory
     BoxLayout
+    DefaultListModel
     JButton
     JFrame
     JLabel
+    JList
     JMenu
     JMenuBar
     JMenuItem
     JPanel
+    JScrollPane
     JSeparator]
+   [javax.swing.event ListSelectionListener]
    [javax.swing.border EmptyBorder]))
 
 (def TITLE "Cahiers")
@@ -30,6 +35,13 @@
 
 (def gui (atom {:doc-panel nil :notes-panel nil}))
 
+(defn add-listbox-listener [listbox callback]
+  (.addListSelectionListener
+   listbox
+   (reify ListSelectionListener
+     (valueChanged
+       [_ _]
+       (callback)))))
 
 ;; TODO: this may be a generic action listener suitable for all widgets ...
 (defn add-action-listener
@@ -53,46 +65,64 @@
     (doto file-menu
       (.add  separator)
       (.add  file-exit))
-
-    ;(add-listener-to-menu file-exit demo-menu-action)))
     (add-action-listener file-exit #(close-app frame))))
 
 
-(defn fill-docs-panel [docs-panel]
+(defn fill-docs-panel [docs-panel pagelist]
   (.removeAll docs-panel)
-  (let [label (JLabel. (utils/timestamp))]
+  (let [selected-page (.getSelectedValue pagelist)
+        label (JLabel. (if (nil? selected-page) "Aucune page sélectionnée" (str "PAGE: " selected-page)))]
+    (println "docspanel" selected-page)
     (doto docs-panel
       (.add label)
       (.revalidate)
       (.repaint))))
 
-(defn fill-pages-panel [pages-panel docs-panel]
+(defn fill-pages-panel [pages-panel docs-panel listbox]
   (.removeAll pages-panel)
-  (let [label (JLabel. (utils/timestamp))
-        button (JButton. "Click")]
-    (. button addActionListener
-       (reify ActionListener
-         (actionPerformed [_ _]
-           (fill-pages-panel pages-panel docs-panel))))
-    (fill-docs-panel docs-panel)
+  (let [selected-book (.getSelectedValue listbox)
+        pages (data/pages-for-book selected-book)
+        model (DefaultListModel.)
+        pagelist (JList. model)
+        label (JLabel. (if (nil? selected-book) "NO SELECTED BOOK" (str "Books for " selected-book)))]
+    
+    (doseq [page pages]
+      (.addElement model page))    
+    (add-listbox-listener
+     pagelist
+     #(fill-docs-panel docs-panel pagelist))
+    
+    (fill-docs-panel docs-panel pagelist)
+    
     (doto pages-panel
       (.add label)
-      (.add button)
+      (.add (JScrollPane. pagelist))
       (.revalidate)
       (.repaint))))
 
 (defn fill-cahiers-panel [cahiers-panel pages-panel docs-panel]
   (.removeAll cahiers-panel)
   (let [label (JLabel. (utils/timestamp))
-        button (JButton. "Click")]
+        button (JButton. "Click")
+        book-names (data/book-titles)
+        model (DefaultListModel.)
+        booklist (JList. model)]
+    (println (class (.getModel booklist)))
+    (doseq [name book-names]
+      (.addElement model name))
+    (add-listbox-listener
+     booklist
+     #(fill-pages-panel pages-panel docs-panel booklist))
+
     (. button addActionListener
        (reify ActionListener
          (actionPerformed [_ _]
            (fill-cahiers-panel cahiers-panel pages-panel docs-panel))))
-    (fill-pages-panel pages-panel docs-panel)
+
+    (fill-pages-panel pages-panel docs-panel booklist)
     (doto cahiers-panel
       (.add label)
-      (.add button)
+      (.add (JScrollPane. booklist))
       (.revalidate)
       (.repaint))))
 
@@ -109,8 +139,7 @@
         cahiers-panel (JPanel.)
         pages-panel (JPanel.)
         docs-panel (JPanel.)
-        location (utils/calculate-frame-location FRAME-WIDTH FRAME-HEIGHT)
-        temp-label (JLabel. "TEMPO")]
+        location (utils/calculate-frame-location FRAME-WIDTH FRAME-HEIGHT)]
 
     (reset! gui {:cahiers-panel cahiers-panel :pages-panel pages-panel})
 
@@ -134,6 +163,7 @@
 
 
     (doto pages-panel
+      (.setLayout (BoxLayout. pages-panel BoxLayout/PAGE_AXIS));)
       (.setBackground Color/LIGHT_GRAY)
       (.setPreferredSize (Dimension. PAGES_WIDTH (.height (.getPreferredSize pages-panel))))
       (.setBorder (BorderFactory/createLineBorder Color/BLACK))

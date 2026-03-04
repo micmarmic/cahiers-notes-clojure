@@ -1,0 +1,5 @@
+book1
+  page1 "b1 page 1"
+  page2 "b2 page 2"
+book2
+  page1 "b2 page 1"
