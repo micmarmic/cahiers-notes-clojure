@@ -5,6 +5,6 @@
 
 (defn -main
   "I don't do a whole lot ... yet."
-  [& args]
+  []
   (println "Application Cahiers de note") 
   (SwingUtilities/invokeLater mainview/create-and-show-gui))

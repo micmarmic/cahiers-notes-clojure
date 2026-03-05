@@ -1,5 +1,6 @@
 (ns cahiers-notes.views.main-view
   (:require
+   [cahiers-notes.controller :as controller]
    [cahiers-notes.data :as data]
    [cahiers-notes.views.gui-utils :as utils]
    [markdown-viewer.lib.markdown-panel :as md])
@@ -9,7 +10,6 @@
     Color
     Dimension
     FlowLayout]
-   [java.awt.event ActionListener]
    [javax.swing
     BorderFactory
     BoxLayout
@@ -29,10 +29,10 @@
    [javax.swing.border EmptyBorder]))
 
 (def TITLE "Cahiers")
-(def FRAME-WIDTH 1000)
+(def FRAME-WIDTH 1200)
 (def FRAME-HEIGHT 800)
-(def CAHIER_WIDTH 240)
-(def PAGES_WIDTH 240)
+(def CAHIER_WIDTH 300)
+(def PAGES_WIDTH 300)
 (def FRAME_BG_COLOR (Color. 206 187 66))
 
 (defn close-app
@@ -67,7 +67,7 @@
     (if edit?
       (.setText docs-pane contents)
       (md/add-text docs-pane contents))))
-    
+
 
 (defn fill-pages-panel [pages-panel listbox md-pane edit-checkbox]
   (.removeAll pages-panel)
@@ -84,7 +84,7 @@
     (utils/add-listbox-listener
      pagelist
      #(fill-docs-panel md-pane pagelist edit-checkbox))
-    
+
     (fill-docs-panel md-pane pagelist edit-checkbox)
 
     (doto pages-panel
@@ -93,25 +93,20 @@
       (.revalidate)
       (.repaint))))
 
-(defn fill-cahiers-panel [cahiers-panel pages-panel docs-pane edit-checkbox]
-  (.removeAll cahiers-panel)
-  (let [label (JLabel. (utils/timestamp))
-        book-names (data/book-titles)
-        model (DefaultListModel.)
-        booklist (JList. model)]
-    (println (class (.getModel booklist)))
-    (doseq [name book-names]
-      (.addElement model name))
-    (utils/add-listbox-listener
-     booklist
-     #(fill-pages-panel pages-panel booklist docs-pane  edit-checkbox))
-
-    (fill-pages-panel pages-panel booklist docs-pane edit-checkbox)
-    (doto cahiers-panel
-      (.add label)
-      (.add (JScrollPane. booklist))
-      (.revalidate)
-      (.repaint))))
+(defn update-cahiers
+  "Update the list after a book was rename.
+   Rebuild the list and select the title if provided."
+  ([booklist]
+   (update-cahiers booklist ""))
+  ([booklist title]
+   (let [book-names (data/book-titles)
+         model (.getModel booklist)]
+     (.removeAllElements model)
+     (doseq [name book-names]
+       (.addElement model name))
+     (when (not= title "")
+       (.setSelectedValue booklist title true)
+       ))))
 
 (defn create-and-show-gui
   "Build and display the view"
@@ -120,31 +115,44 @@
         main-panel (JPanel.)
         left-container (JPanel.)
         cahiers-panel (JPanel.)
+        cahier-button-panel (JPanel.)
+        add-cahier-button (JButton. "Ajouter")
+        rename-cahier-button (JButton. "Nom")
+        delete-cahier-button (JButton. "Supprimer")
         pages-panel (JPanel.)
         edit-panel (JPanel.)
         edit-checkbox (JCheckBox.)
         docs-panel (JPanel.)
         docs-pane (JTextPane.)
-        location (utils/calculate-frame-location FRAME-WIDTH FRAME-HEIGHT)]
+        location (utils/calculate-frame-location FRAME-WIDTH FRAME-HEIGHT)
+        bookmodel (DefaultListModel.)
+        booklist (JList. bookmodel)]
 
     (doto main-panel
       (.setBackground FRAME_BG_COLOR)
       (.setBorder (EmptyBorder. 10 10 10 10))
       (.setLayout (BorderLayout.)))
     (.add frame main-panel)
-
     (.add main-panel left-container BorderLayout/WEST)
-    (.setLayout left-container (BorderLayout.))
 
     (doto cahiers-panel
-      (.setLayout (BoxLayout. cahiers-panel BoxLayout/PAGE_AXIS));)
+      (.setLayout (BorderLayout.));)
       (.setBackground Color/YELLOW)
       (.setPreferredSize (Dimension. CAHIER_WIDTH (.height (.getPreferredSize cahiers-panel))))
-      (.setBorder (BorderFactory/createLineBorder Color/BLACK)))
+      (.setBorder (BorderFactory/createLineBorder Color/BLACK))
+      (.add (JScrollPane. booklist) BorderLayout/CENTER)
+      (.add cahier-button-panel BorderLayout/PAGE_END))
       ;(.add (JLabel. "CAHIERS"))
       ;(.add button-cahier))    
+    (.setLayout left-container (BorderLayout.))
     (.add left-container cahiers-panel BorderLayout/WEST)
 
+    (.setLayout cahier-button-panel (FlowLayout.))
+    (doto
+     cahier-button-panel
+      (.add add-cahier-button)
+      (.add rename-cahier-button)
+      (.add delete-cahier-button))
 
     (doto pages-panel
       (.setLayout (BoxLayout. pages-panel BoxLayout/PAGE_AXIS));)
@@ -158,24 +166,38 @@
       (.add (JLabel. "Éditer?"))
       (.add edit-checkbox))
 
-    ;; (.addActionListener
-    ;;  edit-checkbox
-    ;;  (reify ActionListener
-    ;;    (actionPerformed [_ _]
-    ;;      (fill-cahiers-panel cahiers-panel pages-panel docs-pane edit-checkbox))))
-
-
-
     (doto docs-panel
       (.setLayout (BorderLayout.))
       (.add edit-panel BorderLayout/NORTH)
       (.add docs-pane BorderLayout/CENTER))
     (.add main-panel docs-panel FlowLayout/CENTER)
 
-    (fill-cahiers-panel cahiers-panel pages-panel docs-pane edit-checkbox)
 
+    ;; callbacks
+    (utils/add-listbox-listener
+     booklist
+     #(fill-pages-panel pages-panel booklist docs-pane  edit-checkbox))
+
+    (utils/add-action-listener
+     add-cahier-button
+     #(controller/add-cahier booklist))
+    
+    (utils/add-action-listener
+     rename-cahier-button
+     #(controller/rename-cahier booklist update-cahiers))
+
+    ;; (.addActionListener
+    ;;  edit-checkbox
+    ;;  (reify ActionListener
+    ;;    (actionPerformed [_ _]
+    ;;      (fill-cahiers-panel cahiers-panel pages-panel docs-pane edit-checkbox))))
+    
+    ;; initial update
+    (update-cahiers booklist)
+    (fill-pages-panel pages-panel booklist docs-pane edit-checkbox)
+
+    ;; finish frame configuratin and display it
     (add-menus frame)
-
     (doto frame
       (.setBackground FRAME_BG_COLOR)
       (.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE)

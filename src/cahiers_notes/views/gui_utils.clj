@@ -1,10 +1,17 @@
 (ns cahiers-notes.views.gui-utils 
   (:import
+   [javax.swing JOptionPane]
    [java.awt GraphicsEnvironment]
    [java.awt.event ActionListener]
    [java.time LocalDateTime]
    [javax.swing ListCellRenderer]
    [javax.swing.event ListSelectionListener]))
+
+
+(defn show-error 
+  "Display the message dialog."
+  [error-message]
+  (JOptionPane/showMessageDialog nil error-message "Oops!" JOptionPane/ERROR_MESSAGE))
 
 (defn calculate-frame-location
   "Calculate absolute x, y coordinates to place the frame approximately.

@@ -10,6 +10,8 @@ Installer le fichier .jar en format uberjar à l'endroit désiré.
 
     $ java -jar cahiers-notes-0.1.0-standalone.jar [dossier-principal]
 
+## TODO
+- titre "Input" de showInputDialog => créer le mien?
 
 ## License
 
