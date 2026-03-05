@@ -1,7 +1,10 @@
 (ns cahiers-notes.views.gui-utils 
   (:import
    [java.awt GraphicsEnvironment]
-   [java.time LocalDateTime]))
+   [java.awt.event ActionListener]
+   [java.time LocalDateTime]
+   [javax.swing ListCellRenderer]
+   [javax.swing.event ListSelectionListener]))
 
 (defn calculate-frame-location
   "Calculate absolute x, y coordinates to place the frame approximately.
@@ -18,3 +21,44 @@
 
 (defn timestamp []
   (.toString (LocalDateTime/now)))
+
+(defn title-for-item
+  "Given a map (or any object), return the string that should appear in the list.
+   If the item is a map with a `:name` key we use that, otherwise we fall back
+   to `str` so the renderer never crashes."
+  [item]
+  (if (map? item)
+    (or (:title item) (str item))
+    (str item)))
+
+(defn title-list-renderer
+  "Creates a ListCellRenderer that shows only the `:name` value of each map."
+  []
+  (reify ListCellRenderer
+    (getListCellRendererComponent [_ list value _index selected? _focused?]
+      ;; Use a plain JLabel (the default renderer) but replace its text.
+      (let [label (javax.swing.DefaultListCellRenderer.)]
+        (.setText label (title-for-item value))
+        ;; Preserve the usual selection/background handling
+        (when selected?
+          (.setBackground label (.getSelectionBackground list))
+          (.setForeground label (.getSelectionForeground list)))
+        (when (not selected?)
+          (.setBackground label (.getBackground list))
+          (.setForeground label (.getForeground list)))
+        (.setEnabled label (.isEnabled list))
+        (.setOpaque label true)
+        label))))
+
+(defn add-listbox-listener [listbox callback]
+  (.addListSelectionListener
+   listbox
+   (reify ListSelectionListener
+     (valueChanged
+       [_ _]
+       (callback)))))
+
+;; TODO: this may be a generic action listener suitable for all widgets ...
+(defn add-action-listener
+  [widget callback]
+  (.addActionListener widget (reify ActionListener (actionPerformed [_ _] (callback)))))

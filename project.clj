@@ -5,6 +5,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]]
   :main ^:skip-aot cahiers-notes.core
-  :target-path "target/%s"
+  :target-path "target/%s" 
+  :source-paths ["src" "../markdown-viewer/src"]
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})

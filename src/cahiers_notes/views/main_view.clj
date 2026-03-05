@@ -1,7 +1,8 @@
 (ns cahiers-notes.views.main-view
   (:require
    [cahiers-notes.data :as data]
-   [cahiers-notes.views.gui-utils :as utils])
+   [cahiers-notes.views.gui-utils :as utils]
+   [markdown-viewer.lib.markdown-panel :as md])
   (:import
    [java.awt
     BorderLayout
@@ -14,6 +15,7 @@
     BoxLayout
     DefaultListModel
     JButton
+    JCheckBox
     JFrame
     JLabel
     JList
@@ -23,11 +25,8 @@
     JPanel
     JScrollPane
     JSeparator
-    JTextPane
-    ListCellRenderer
-    SwingConstants]
-   [javax.swing.border EmptyBorder]
-   [javax.swing.event ListSelectionListener]))
+    JTextPane]
+   [javax.swing.border EmptyBorder]))
 
 (def TITLE "Cahiers")
 (def FRAME-WIDTH 1000)
@@ -35,49 +34,6 @@
 (def CAHIER_WIDTH 240)
 (def PAGES_WIDTH 240)
 (def FRAME_BG_COLOR (Color. 206 187 66))
-
-(def gui (atom {:doc-panel nil :notes-panel nil}))
-
-(defn title-for-item
-  "Given a map (or any object), return the string that should appear in the list.
-   If the item is a map with a `:name` key we use that, otherwise we fall back
-   to `str` so the renderer never crashes."
-  [item]
-  (if (map? item)
-    (or (:title item) (str item))
-    (str item)))
-
-(defn title-list-renderer
-  "Creates a ListCellRenderer that shows only the `:name` value of each map."
-  []
-  (reify ListCellRenderer
-    (getListCellRendererComponent [_ list value index selected? focused?]
-      ;; Use a plain JLabel (the default renderer) but replace its text.
-      (let [label (javax.swing.DefaultListCellRenderer.)]
-        (.setText label (title-for-item value))
-        ;; Preserve the usual selection/background handling
-        (when selected?
-          (.setBackground label (.getSelectionBackground list))
-          (.setForeground label (.getSelectionForeground list)))
-        (when (not selected?)
-          (.setBackground label (.getBackground list))
-          (.setForeground label (.getForeground list)))
-        (.setEnabled label (.isEnabled list))
-        (.setOpaque label true)
-        label))))
-
-(defn add-listbox-listener [listbox callback]
-  (.addListSelectionListener
-   listbox
-   (reify ListSelectionListener
-     (valueChanged
-       [_ _]
-       (callback)))))
-
-;; TODO: this may be a generic action listener suitable for all widgets ...
-(defn add-action-listener
-  [widget callback]
-  (.addActionListener widget (reify ActionListener (actionPerformed [_ _] (callback)))))
 
 (defn close-app
   [frame]
@@ -96,28 +52,24 @@
     (doto file-menu
       (.add  separator)
       (.add  file-exit))
-    (add-action-listener file-exit #(close-app frame))))
+    (utils/add-action-listener file-exit #(close-app frame))))
 
 
-(defn fill-docs-panel [docs-panel pagelist]
-  (.removeAll docs-panel)
+(defn fill-docs-panel [docs-pane pagelist edit-checkbox]
   (let [selected-page (.getSelectedValue pagelist)
-        label (JLabel. (if (nil? selected-page) "Aucune page sélectionnée" (str "PAGE: " (:title selected-page))))
-        textPane (JTextPane.)
-        contents (if (nil? selected-page) "" (:content selected-page))]
-    (println "docspanel" selected-page)
+        ;textPane (JTextPane.)
+        contents (if (nil? selected-page) "" (:content selected-page))
+        edit? (.isSelected edit-checkbox)]
 
-    (doto textPane
-      (.setText contents)
-      (.setEditable false))
+    (.setEditable docs-pane edit?)
+    (md/reset docs-pane)
+
+    (if edit?
+      (.setText docs-pane contents)
+      (md/add-text docs-pane contents))))
     
-    (doto docs-panel
-      (.setLayout (BorderLayout.))
-      (.add textPane BorderLayout/CENTER)
-      (.revalidate)
-      (.repaint))))
 
-(defn fill-pages-panel [pages-panel docs-panel listbox]
+(defn fill-pages-panel [pages-panel listbox md-pane edit-checkbox]
   (.removeAll pages-panel)
   (let [selected-book (.getSelectedValue listbox)
         pages (data/pages-for-book-title selected-book)
@@ -125,15 +77,15 @@
         pagelist (JList. model)
         label (JLabel. (if (nil? selected-book) "NO SELECTED BOOK" (str "Books for " selected-book)))]
 
-    (.setCellRenderer pagelist (title-list-renderer))
+    (.setCellRenderer pagelist (utils/title-list-renderer))
 
     (doseq [page pages]
       (.addElement model page))
-    (add-listbox-listener
+    (utils/add-listbox-listener
      pagelist
-     #(fill-docs-panel docs-panel pagelist))
-
-    (fill-docs-panel docs-panel pagelist)
+     #(fill-docs-panel md-pane pagelist edit-checkbox))
+    
+    (fill-docs-panel md-pane pagelist edit-checkbox)
 
     (doto pages-panel
       (.add label)
@@ -141,35 +93,25 @@
       (.revalidate)
       (.repaint))))
 
-(defn fill-cahiers-panel [cahiers-panel pages-panel docs-panel]
+(defn fill-cahiers-panel [cahiers-panel pages-panel docs-pane edit-checkbox]
   (.removeAll cahiers-panel)
   (let [label (JLabel. (utils/timestamp))
-        button (JButton. "Click")
         book-names (data/book-titles)
         model (DefaultListModel.)
         booklist (JList. model)]
     (println (class (.getModel booklist)))
     (doseq [name book-names]
       (.addElement model name))
-    (add-listbox-listener
+    (utils/add-listbox-listener
      booklist
-     #(fill-pages-panel pages-panel docs-panel booklist))
+     #(fill-pages-panel pages-panel booklist docs-pane  edit-checkbox))
 
-    (. button addActionListener
-       (reify ActionListener
-         (actionPerformed [_ _]
-           (fill-cahiers-panel cahiers-panel pages-panel docs-panel))))
-
-    (fill-pages-panel pages-panel docs-panel booklist)
+    (fill-pages-panel pages-panel booklist docs-pane edit-checkbox)
     (doto cahiers-panel
       (.add label)
       (.add (JScrollPane. booklist))
       (.revalidate)
       (.repaint))))
-
-
-
-  ;(.add cahiers-frame (JLabel. timestamp))
 
 (defn create-and-show-gui
   "Build and display the view"
@@ -179,10 +121,11 @@
         left-container (JPanel.)
         cahiers-panel (JPanel.)
         pages-panel (JPanel.)
+        edit-panel (JPanel.)
+        edit-checkbox (JCheckBox.)
         docs-panel (JPanel.)
+        docs-pane (JTextPane.)
         location (utils/calculate-frame-location FRAME-WIDTH FRAME-HEIGHT)]
-
-    (reset! gui {:cahiers-panel cahiers-panel :pages-panel pages-panel})
 
     (doto main-panel
       (.setBackground FRAME_BG_COLOR)
@@ -211,14 +154,25 @@
       (.add (JLabel. "PAGES")))
     (.add left-container pages-panel BorderLayout/EAST)
 
+    (doto edit-panel
+      (.add (JLabel. "Éditer?"))
+      (.add edit-checkbox))
+
+    ;; (.addActionListener
+    ;;  edit-checkbox
+    ;;  (reify ActionListener
+    ;;    (actionPerformed [_ _]
+    ;;      (fill-cahiers-panel cahiers-panel pages-panel docs-pane edit-checkbox))))
+
+
+
     (doto docs-panel
-      (.setBackground Color/ORANGE)
-      (.add (JLabel. "DOCS")))
+      (.setLayout (BorderLayout.))
+      (.add edit-panel BorderLayout/NORTH)
+      (.add docs-pane BorderLayout/CENTER))
     (.add main-panel docs-panel FlowLayout/CENTER)
 
-    
-    (fill-cahiers-panel cahiers-panel pages-panel docs-panel)
-
+    (fill-cahiers-panel cahiers-panel pages-panel docs-pane edit-checkbox)
 
     (add-menus frame)
 
