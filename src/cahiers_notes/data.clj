@@ -1,5 +1,4 @@
-(ns cahiers-notes.data
-  (:require [clojure.pprint :refer [pprint]]))
+(ns cahiers-notes.data)
 
 
 (def books (atom nil))

@@ -3,7 +3,6 @@
    [javax.swing JOptionPane]
    [java.awt GraphicsEnvironment]
    [java.awt.event ActionListener]
-   [java.time LocalDateTime]
    [javax.swing ListCellRenderer]
    [javax.swing.event ListSelectionListener]))
 
@@ -25,9 +24,6 @@
         y (/ (- height frame-height) 2)] 
     (println "overall w and h" width height)
     {:x x :y y}))
-
-(defn timestamp []
-  (.toString (LocalDateTime/now)))
 
 (defn title-for-item
   "Given a map (or any object), return the string that should appear in the list.

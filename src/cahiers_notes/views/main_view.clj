@@ -54,8 +54,7 @@
       (.add  file-exit))
     (utils/add-action-listener file-exit #(close-app frame))))
 
-
-(defn fill-docs-panel [docs-pane pagelist edit-checkbox]
+(defn update-docs-panel [docs-pane pagelist edit-checkbox]
   (let [selected-page (.getSelectedValue pagelist)
         ;textPane (JTextPane.)
         contents (if (nil? selected-page) "" (:content selected-page))
@@ -63,35 +62,22 @@
 
     (.setEditable docs-pane edit?)
     (md/reset docs-pane)
-
     (if edit?
-      (.setText docs-pane contents)
+      (do
+        (md/clear-all-styles docs-pane)
+        (.setText docs-pane contents))
       (md/add-text docs-pane contents))))
 
-
-(defn fill-pages-panel [pages-panel listbox md-pane edit-checkbox]
-  (.removeAll pages-panel)
-  (let [selected-book (.getSelectedValue listbox)
+(defn update-pages [booklist pagelist docs-pane edit-checkbox]
+  (let [selected-book (.getSelectedValue booklist)
         pages (data/pages-for-book-title selected-book)
-        model (DefaultListModel.)
-        pagelist (JList. model)
-        label (JLabel. (if (nil? selected-book) "NO SELECTED BOOK" (str "Books for " selected-book)))]
+        pagemodel (.getModel pagelist)]
 
-    (.setCellRenderer pagelist (utils/title-list-renderer))
-
+    (.removeAllElements pagemodel)
     (doseq [page pages]
-      (.addElement model page))
-    (utils/add-listbox-listener
-     pagelist
-     #(fill-docs-panel md-pane pagelist edit-checkbox))
+      (.addElement pagemodel page))
 
-    (fill-docs-panel md-pane pagelist edit-checkbox)
-
-    (doto pages-panel
-      (.add label)
-      (.add (JScrollPane. pagelist))
-      (.revalidate)
-      (.repaint))))
+    (update-docs-panel docs-pane pagelist edit-checkbox)))
 
 (defn update-cahiers
   "Update the list after a book was rename.
@@ -105,8 +91,8 @@
      (doseq [name book-names]
        (.addElement model name))
      (when (not= title "")
-       (.setSelectedValue booklist title true)
-       ))))
+       (.setSelectedValue booklist title true)))))
+
 
 (defn create-and-show-gui
   "Build and display the view"
@@ -126,7 +112,9 @@
         docs-pane (JTextPane.)
         location (utils/calculate-frame-location FRAME-WIDTH FRAME-HEIGHT)
         bookmodel (DefaultListModel.)
-        booklist (JList. bookmodel)]
+        booklist (JList. bookmodel)
+        pagemodel (DefaultListModel.)
+        pagelist (JList. pagemodel)]
 
     (doto main-panel
       (.setBackground FRAME_BG_COLOR)
@@ -154,12 +142,14 @@
       (.add rename-cahier-button)
       (.add delete-cahier-button))
 
+    (.setCellRenderer pagelist (utils/title-list-renderer))
+
     (doto pages-panel
       (.setLayout (BoxLayout. pages-panel BoxLayout/PAGE_AXIS));)
       (.setBackground Color/LIGHT_GRAY)
       (.setPreferredSize (Dimension. PAGES_WIDTH (.height (.getPreferredSize pages-panel))))
       (.setBorder (BorderFactory/createLineBorder Color/BLACK))
-      (.add (JLabel. "PAGES")))
+      (.add (JScrollPane. pagelist)))
     (.add left-container pages-panel BorderLayout/EAST)
 
     (doto edit-panel
@@ -176,25 +166,33 @@
     ;; callbacks
     (utils/add-listbox-listener
      booklist
-     #(fill-pages-panel pages-panel booklist docs-pane  edit-checkbox))
+     #(update-pages booklist pagelist docs-pane  edit-checkbox))
 
     (utils/add-action-listener
      add-cahier-button
      #(controller/add-cahier booklist))
-    
+
     (utils/add-action-listener
      rename-cahier-button
      #(controller/rename-cahier booklist update-cahiers))
+
+    (utils/add-action-listener
+     edit-checkbox
+     ; simulate a change to the page selection to redisplay the page
+     #(update-docs-panel docs-pane pagelist edit-checkbox))
+
+    (utils/add-listbox-listener
+     pagelist
+     #(update-docs-panel docs-pane pagelist edit-checkbox))
 
     ;; (.addActionListener
     ;;  edit-checkbox
     ;;  (reify ActionListener
     ;;    (actionPerformed [_ _]
     ;;      (fill-cahiers-panel cahiers-panel pages-panel docs-pane edit-checkbox))))
-    
+
     ;; initial update
     (update-cahiers booklist)
-    (fill-pages-panel pages-panel booklist docs-pane edit-checkbox)
 
     ;; finish frame configuratin and display it
     (add-menus frame)
