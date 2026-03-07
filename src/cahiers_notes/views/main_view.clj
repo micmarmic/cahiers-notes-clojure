@@ -37,7 +37,8 @@
 
 (defn close-app
   [frame]
-  (println "Closing...")
+  (println "Application cahiers fermée.")
+  ;; TODO check for unsaved edits?
   (.dispose frame)
   (System/exit 0))
 
@@ -55,9 +56,11 @@
     (utils/add-action-listener file-exit #(close-app frame))))
 
 (defn update-docs-panel [docs-pane pagelist edit-checkbox]
+  (println "selected page\n" (.getSelectedValue pagelist))
   (let [selected-page (.getSelectedValue pagelist)
-        ;textPane (JTextPane.)
-        contents (if (nil? selected-page) "" (:content selected-page))
+        contents (if (not= selected-page nil)
+                   (controller/file-contents (:path selected-page))
+                   "")
         edit? (.isSelected edit-checkbox)]
 
     (.setEditable docs-pane edit?)

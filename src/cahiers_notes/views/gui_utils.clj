@@ -22,7 +22,6 @@
         height (.getHeight (.getDisplayMode gd))
         x (/ (- width frame-width) 2)
         y (/ (- height frame-height) 2)] 
-    (println "overall w and h" width height)
     {:x x :y y}))
 
 (defn title-for-item

@@ -2,6 +2,9 @@
 
 
 (def books (atom nil))
+(defn set-books! 
+  [books-data]
+  (reset! books books-data))
 
 (def GUID-CHARS [\0 \1 \2 \3 \4 \5 \6 \7 \8 \9 \a \b \c \d \e \f])
 (def NUM-GUID-CHARS (count GUID-CHARS))
@@ -20,22 +23,22 @@
 ;;   (println bookname)
 ;;   )
 
-;; book titles must be unique
-(defn init-books []
-  (reset!
-   books
-   {"a1111"
-    {:title "Book 1"
-     :pages [{:id "b1p1" :title "b1page1" :content "This is hard coded b1page1"}
-             {:id "b1p2" :title "b1page2" :content (str "# Titre\nTexte normal\n## Sous-titre\n"
-                                                        "- item 1\n"
-                                                        "  - item 1.1\n")}]}
-    "b1111"
-    {:title "Book 2"
-     :pages [{:id "b1p1" :title "b2page1" :content "Still hard b2p1"}
-             {:id "b2p2" :title "b2page2" :content "yea, yea, b2p2"}]}}))
+;; ;; book titles must be unique
+;; (defn init-books []
+;;   (reset!
+;;    books
+;;    {"a1111"
+;;     {:title "Book 1"
+;;      :pages [{:id "b1p1" :title "b1page1" :content "This is hard coded b1page1"}
+;;              {:id "b1p2" :title "b1page2" :content (str "# Titre\nTexte normal\n## Sous-titre\n"
+;;                                                         "- item 1\n"
+;;                                                         "  - item 1.1\n")}]}
+;;     "b1111"
+;;     {:title "Book 2"
+;;      :pages [{:id "b1p1" :title "b2page1" :content "Still hard b2p1"}
+;;              {:id "b2p2" :title "b2page2" :content "yea, yea, b2p2"}]}}))
 
-(init-books)
+
 
 (defn book-titles []
   (map :title (vals @books)))
@@ -59,9 +62,7 @@
     false
     (let [book {:title title :pages []}
           id (make-guid)]
-      (println "NEW ID" id)
       (reset! books (assoc @books id book))
-      (println "BOOKS AFTER ADD:" @books)
       true)))
 
 (defn book-id 
