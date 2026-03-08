@@ -56,7 +56,6 @@
     (utils/add-action-listener file-exit #(close-app frame))))
 
 (defn update-docs-panel [docs-pane pagelist edit-checkbox]
-  (println "selected page\n" (.getSelectedValue pagelist))
   (let [selected-page (.getSelectedValue pagelist)
         contents (if (not= selected-page nil)
                    (controller/file-contents (:path selected-page))

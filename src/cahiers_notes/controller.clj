@@ -3,7 +3,8 @@
    [cahiers-notes.data :as data]
    [cahiers-notes.file-utils :as files]
    [cahiers-notes.views.gui-utils :as gui]
-   [clojure.java.io :as io])
+   [clojure.java.io :as io]
+   [clojure.pprint :as pprint])
   (:import
    [java.io FileNotFoundException]
    [javax.swing JOptionPane]))
@@ -11,14 +12,14 @@
 
 (defn init-books
   "Build the books database from the directory structure in the provide root"
-  [root]
-  ;
-  (if-not (.isDirectory (io/file root))
-    {:error (str "Le chemin n'existe pas:" root)}
-    (let [books (files/get-books-from-disk root)]
-      (println "count books" (count books))
-      (data/set-books! books)
-      {:success "OK"})))
+  [root-string]
+  (let [root-file (io/file root-string)]
+    (if-not (.isDirectory root-file)
+      {:error (str "Le chemin n'existe pas:" root-string)}
+      (let [books (files/get-books-from-disk root-file)]
+        (data/set-root-folder! root-file)
+        (data/set-books! books)
+        {:success "OK"}))))
 
 (comment
   (def cahier-path "/home/michel/veraencrypted/Chiffré/DATA_FOR_APPS/CahiersProd")
@@ -29,30 +30,49 @@
 
 
 (defn add-cahier
-  "Add a cahier on disk and in the data and refresh the guid.
-     Display a messagebox if there is an error"
+  "Add a cahier folder on disk and add the corresponding data.
+   Refresh GUI.
+   Display a messagebox if there is an error"
   [booklist]
-  (let [title (JOptionPane/showInputDialog "Titre: ")
+  (let [title (JOptionPane/showInputDialog "Titre: ")        
         bookmodel (.getModel booklist)]
     (when (not= nil title)
-      (if-not (data/add-cahier title)
-    ;showInputDialog
-        (gui/show-error "Ce titre de livre existe déjà!")
-        (do
-          (.addElement bookmodel title)
-          (.setSelectedIndex booklist (dec (.getSize bookmodel))))))))
+      (cond (data/book-title-exists? title)
+            (gui/show-error "Ce titre de livre existe déjà!")
+            :else
+            (let [new-subfolder-result (files/create-subfolder
+                                        @data/root-folder
+                                        title)]
+              (if (:error new-subfolder-result)
+                (gui/show-error (:error new-subfolder-result))
+                (if-not (data/add-cahier (:success new-subfolder-result))
+                  (gui/show-error "Ce titre de livre existe déjà!")
+                  (do
+                    (.addElement bookmodel title)
+                    (.setSelectedIndex booklist (dec (.getSize bookmodel)))))))))))
 
 (defn rename-cahier
   "Rename a cahier on disk and in the data and refresh the guid.
    Display a messagebox if there is an error"
   [booklist gui-update-fn]
-  (let [current-title (.getSelectedValue booklist)]
+  (let [current-title (.getSelectedValue booklist)
+        current-book (data/book-for-title current-title)]
     (when (not= nil current-title)
       (let [new-title (JOptionPane/showInputDialog "Titre: " current-title)]
         (when (not= nil new-title)
-          (if-not (data/rename-cahier current-title new-title)
-            (gui/show-error "Ce titre de livre existe déjà!")
-            (gui-update-fn booklist new-title)))))))
+          (println "Current book in rename-cahier:" current-book)
+          (let [new-subfolder-result (files/rename-cahier-folder
+                                      (:path current-book)
+                                      new-title)]
+            (if (:error new-subfolder-result)
+              (gui/show-error (:error new-subfolder-result))
+              (if-not (data/rename-cahier current-title new-title)
+                (gui/show-error "Impossible de renommer ce cahier.")
+                (do
+                  (swap! data/books assoc (:id current-book) 
+                         (data/update-book-title-path current-book new-title (:success new-subfolder-result)))
+                  (pprint/pprint @data/books)
+                  (gui-update-fn booklist new-title))))))))))
 
 (defn file-contents
   "Return the contents of the given File.
@@ -68,5 +88,3 @@
   (def file (io/file "/home/michel/veraencrypted/Chiffré/DATA_FOR_APPS/CahiersProd/Programmation/pyinstaller.txt"))
   (file-contents file)
   )
-
-

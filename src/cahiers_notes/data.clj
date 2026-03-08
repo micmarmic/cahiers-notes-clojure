@@ -2,7 +2,14 @@
 
 
 (def books (atom nil))
-(defn set-books! 
+
+(def root-folder (atom nil))
+
+(defn set-root-folder!
+  [file-path]
+  (reset! root-folder file-path))
+
+(defn set-books!
   [books-data]
   (reset! books books-data))
 
@@ -55,20 +62,36 @@
 
 (defn add-cahier
   "Add the cahier to the data model.
-   This is only in memory. The controller creates the corresponding folder.
-   Return false if the title exists, true otherwise."
-  [title]
-  (if (book-title-exists? title)
-    false
-    (let [book {:title title :pages []}
-          id (make-guid)]
-      (reset! books (assoc @books id book))
-      true)))
+   This is only in memory.
+   Return false if the title exists, true otherwise.
+   Caller must check that folder exists."
+  [directory-file]
+  (let [title (.getName directory-file)]
+    (if (book-title-exists? title)
+      false
+      (let [book {:title title :path directory-file :pages []}
+            id (make-guid)]
+        (reset! books (assoc @books id book))
+        true))))
 
-(defn book-id 
+(defn book-id
   "Return the ID for the title or nil if not found"
   [title]
   (first (filter #(= title (:title (get @books %))) (keys @books))))
+
+(defn book-for-title
+  "Return the book for the title or nil if not found"
+  [title]
+  (first (filter #(= title (:title %)) (vals @books))))
+
+(defn update-book-title-path
+  "Update the title and path of a book and return it"
+  [book new-title new-path]
+  {:id (:id book)
+   :title new-title
+   :path new-path
+   :pages (:pages book)})
+
 
 (defn rename-cahier
   "Rename the cahier with the current title to the new title.
@@ -81,12 +104,6 @@
     (let [current-book-id (book-id current-title)]
       (reset! books (assoc-in @books [current-book-id :title] new-title))
       true)))
-
-(assoc-in @books ["a1111" :title] "a2223")
-
-(rename-cahier "Book 1" "Book 11")
-@books
-
 
 (defn pages-for-book-title [book-title]
   (:pages (first (filter #(= book-title (:title %)) (vals @books)))))
