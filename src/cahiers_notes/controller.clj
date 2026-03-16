@@ -21,13 +21,32 @@
         (data/set-books! books)
         {:success "OK"}))))
 
-(comment
-  (def cahier-path "/home/michel/veraencrypted/Chiffré/DATA_FOR_APPS/CahiersProd")
-  (init-books cahier-path)
-  @data/books
-  (doseq [title (data/book-titles)]
-    (println title)))
+(defn add-page
+  [booklist pagelist _docs-pane _callback]
+  (when (not (nil?  (.getSelectedValue booklist)))
+    (let [book-title (.getSelectedValue booklist)
+          new-page-title (JOptionPane/showInputDialog "Titre: ")
+          pagemodel (.getModel pagelist)]
+          (when (not= nil new-page-title)
+          (cond (data/page-title-exists? new-page-title)
+                (gui/show-error "Ce titre de page existe déjà!")
+                :else
+                (println "TODO ADD PAGE '" new-page-title "' to book '" book-title)
+                ;; 
+                ;; (let [new-subfolder-result (files/create-subfolder
+                ;;                             @data/root-folder
+                ;;                             title)]
+                ;;   (if (:error new-subfolder-result)
+                ;;     (gui/show-error (:error new-subfolder-result))
+                ;;     (if-not (data/add-cahier (:success new-subfolder-result))
+                ;;       (gui/show-error "Ce titre de livre existe déjà!")
+                ;;       (do
+                ;;         (.addElement pagemodel title)
+                ;;         (.setSelectedIndex pagemodel (dec (.getSize pagemodel)))))))
+                        )))))
 
+(defn rename-page
+  [_pagelist _callback])
 
 (defn add-cahier
   "Add a cahier folder on disk and add the corresponding data.
@@ -36,6 +55,7 @@
   [booklist]
   (let [title (JOptionPane/showInputDialog "Titre: ")        
         bookmodel (.getModel booklist)]
+    ;; TODO validate title: no unlawful chars - it's also a path name
     (when (not= nil title)
       (cond (data/book-title-exists? title)
             (gui/show-error "Ce titre de livre existe déjà!")
@@ -60,7 +80,6 @@
     (when (not= nil current-title)
       (let [new-title (JOptionPane/showInputDialog "Titre: " current-title)]
         (when (not= nil new-title)
-          (println "Current book in rename-cahier:" current-book)
           (let [new-subfolder-result (files/rename-cahier-folder
                                       (:path current-book)
                                       new-title)]

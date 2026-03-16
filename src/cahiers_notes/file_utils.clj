@@ -78,7 +78,7 @@
     (catch Exception e
       {:error (str "Impossible de renommer ce" 
                    " cahier sur le disque. Le nom doit être un nom"
-                   " de répertoire valide.\b" (.getMessage e))})))
+                   " de répertoire valide.n" (.getMessage e))})))
 
 (comment 
   (def source-folder-file (io/file "/home/michel/Downloads/TEMP"))    

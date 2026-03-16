@@ -12,7 +12,6 @@
     FlowLayout]
    [javax.swing
     BorderFactory
-    BoxLayout
     DefaultListModel
     JButton
     JCheckBox
@@ -23,7 +22,7 @@
     JMenuBar
     JMenuItem
     JPanel
-    JScrollPane
+    JScrollPane 
     JSeparator
     JTextPane]
    [javax.swing.border EmptyBorder]))
@@ -70,19 +69,12 @@
         (.setText docs-pane contents))
       (md/add-text docs-pane contents))))
 
-(defn update-pages [booklist pagelist docs-pane edit-checkbox]
-  (let [selected-book (.getSelectedValue booklist)
-        pages (data/pages-for-book-title selected-book)
-        pagemodel (.getModel pagelist)]
-
-    (.removeAllElements pagemodel)
-    (doseq [page pages]
-      (.addElement pagemodel page))
-
-    (update-docs-panel docs-pane pagelist edit-checkbox)))
+(defn update-pages 
+  [_booklist _pagelist _docs-pane  _edit-checkbox]
+  "")
 
 (defn update-cahiers
-  "Update the list after a book was rename.
+  "Update the list after a book was renamed.
    Rebuild the list and select the title if provided."
   ([booklist]
    (update-cahiers booklist ""))
@@ -91,10 +83,9 @@
          model (.getModel booklist)]
      (.removeAllElements model)
      (doseq [name book-names]
-       (.addElement model name))
+       (.addElement model name))     
      (when (not= title "")
        (.setSelectedValue booklist title true)))))
-
 
 (defn create-and-show-gui
   "Build and display the view"
@@ -106,12 +97,15 @@
         cahier-button-panel (JPanel.)
         add-cahier-button (JButton. "Ajouter")
         rename-cahier-button (JButton. "Nom")
-        delete-cahier-button (JButton. "Supprimer")
         pages-panel (JPanel.)
+        pages-button-panel (JPanel.)
+        add-page-button (JButton. "Ajouter")
+        rename-page-button (JButton. "Renommer")
         edit-panel (JPanel.)
         edit-checkbox (JCheckBox.)
         docs-panel (JPanel.)
         docs-pane (JTextPane.)
+        docs-scroll (JScrollPane. docs-pane)
         location (utils/calculate-frame-location FRAME-WIDTH FRAME-HEIGHT)
         bookmodel (DefaultListModel.)
         booklist (JList. bookmodel)
@@ -141,27 +135,49 @@
     (doto
      cahier-button-panel
       (.add add-cahier-button)
-      (.add rename-cahier-button)
-      (.add delete-cahier-button))
+      (.add rename-cahier-button))
 
     (.setCellRenderer pagelist (utils/title-list-renderer))
 
     (doto pages-panel
-      (.setLayout (BoxLayout. pages-panel BoxLayout/PAGE_AXIS));)
+      (.setLayout (BorderLayout.))
       (.setBackground Color/LIGHT_GRAY)
       (.setPreferredSize (Dimension. PAGES_WIDTH (.height (.getPreferredSize pages-panel))))
       (.setBorder (BorderFactory/createLineBorder Color/BLACK))
-      (.add (JScrollPane. pagelist)))
+      (.add (JScrollPane. pagelist) BorderLayout/CENTER)
+      (.add pages-button-panel BorderLayout/SOUTH))
+
     (.add left-container pages-panel BorderLayout/EAST)
+
+
+    (doto pages-button-panel
+      (.setLayout (FlowLayout.))
+      (.add add-page-button)
+      (.add rename-page-button))
 
     (doto edit-panel
       (.add (JLabel. "Éditer?"))
       (.add edit-checkbox))
 
+    (doto docs-scroll
+      (.setVerticalScrollBarPolicy JScrollPane/VERTICAL_SCROLLBAR_ALWAYS)
+      (.setHorizontalScrollBarPolicy JScrollPane/HORIZONTAL_SCROLLBAR_NEVER))
+
+    ;; (doto docs-pane
+    ;;   (.setLineWrap true)
+    ;;   (.setWrapStyleWord true))
+
     (doto docs-panel
       (.setLayout (BorderLayout.))
       (.add edit-panel BorderLayout/NORTH)
-      (.add docs-pane BorderLayout/CENTER))
+      (.add docs-scroll BorderLayout/CENTER)
+      ;(.add docs-pane BorderLayout/CENTER)
+      )
+
+    ;; restrain the width of the docs-pane
+    (.setPreferredSize docs-pane (Dimension. 100 100))
+    (.setSize docs-pane (Dimension. 100 100))
+
     (.add main-panel docs-panel FlowLayout/CENTER)
 
 
@@ -177,6 +193,14 @@
     (utils/add-action-listener
      rename-cahier-button
      #(controller/rename-cahier booklist update-cahiers))
+
+    (utils/add-action-listener
+     add-page-button
+     #(controller/add-page booklist pagelist docs-pane update-pages))
+
+    (utils/add-action-listener
+     rename-page-button
+     #(controller/rename-page pagelist update-pages))
 
     (utils/add-action-listener
      edit-checkbox

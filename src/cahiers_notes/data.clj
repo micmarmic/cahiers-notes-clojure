@@ -22,31 +22,6 @@
   []
   (reduce str (for [_ (range 32)] (get GUID-CHARS (rand-int NUM-GUID-CHARS)))))
 
-
-;; (defn add-book
-;;   "Add a new directory and update the data."
-;;   [bookname]
-;;   ; title must be unique
-;;   (println bookname)
-;;   )
-
-;; ;; book titles must be unique
-;; (defn init-books []
-;;   (reset!
-;;    books
-;;    {"a1111"
-;;     {:title "Book 1"
-;;      :pages [{:id "b1p1" :title "b1page1" :content "This is hard coded b1page1"}
-;;              {:id "b1p2" :title "b1page2" :content (str "# Titre\nTexte normal\n## Sous-titre\n"
-;;                                                         "- item 1\n"
-;;                                                         "  - item 1.1\n")}]}
-;;     "b1111"
-;;     {:title "Book 2"
-;;      :pages [{:id "b1p1" :title "b2page1" :content "Still hard b2p1"}
-;;              {:id "b2p2" :title "b2page2" :content "yea, yea, b2p2"}]}}))
-
-
-
 (defn book-titles []
   (map :title (vals @books)))
 
@@ -60,17 +35,50 @@
      true
      false)))
 
+
+
+(comment
+  (let [books {:book1 {:title "Title 1" :pages [{:title "allo"}]}
+               :book2 {:title "Title 2" :pages [{:title "love"}]}
+               :book3 {:title "Title 3" :pages [{:title "toto"}]} 
+               :book4 {:title "Title 4" :pages [{:title "robo"}]}}
+        title "Title 5"]
+    (require '[clojure.pprint :as pp])
+    (book-title-exists? title books))
+
+  (let [books {:book1 {:pages [{:title "allo"}]} :book2 {:pages [{:title "love"}]}
+               :book3 {:pages [{:title "toto"}]} :book4 {:pages [{:title "robo"}]}}
+        title "toao"]
+    (require '[clojure.pprint :as pp])
+    (if (seq (filter #(= (:title %) title) (flatten (map :pages (vals books)))))
+      true
+      false))
+    ;(pp/pprint books)
+  )
+  
+
+(defn page-title-exists?
+  "True if the page title exists. 
+   Pass books as argument for testing, else default to @books.
+   Pages are stored in a vector in books."
+  ([title]
+   (book-title-exists? title @books))
+  ([title the-books]
+   (if (seq (filter #(= (:title %) title) (flatten (map :pages (vals the-books)))))
+      true
+      false)))
+
 (defn add-cahier
   "Add the cahier to the data model.
    This is only in memory.
    Return false if the title exists, true otherwise.
    Caller must check that folder exists."
   [directory-file]
-  (let [title (.getName directory-file)]
+  (let [title (.getName directory-file)
+        id (make-guid)]
     (if (book-title-exists? title)
       false
-      (let [book {:title title :path directory-file :pages []}
-            id (make-guid)]
+      (let [book {:id id :title title :path directory-file :pages []}]
         (reset! books (assoc @books id book))
         true))))
 
@@ -105,9 +113,9 @@
       (reset! books (assoc-in @books [current-book-id :title] new-title))
       true)))
 
-(defn pages-for-book-title [book-title]
-  (:pages (first (filter #(= book-title (:title %)) (vals @books)))))
-
+;; (defn pages-for-book-title [book-title]
+;;   (:pages (first (filter #(= book-title (:title %)) (vals @books)))))
+;; 
 
 
 
