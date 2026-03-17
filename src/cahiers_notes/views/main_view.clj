@@ -69,9 +69,15 @@
         (.setText docs-pane contents))
       (md/add-text docs-pane contents))))
 
-(defn update-pages 
-  [_booklist _pagelist _docs-pane  _edit-checkbox]
-  "")
+(defn update-pages [booklist pagelist docs-pane  edit-checkbox]
+  (let [selected-book (.getSelectedValue booklist)
+        pages (data/pages-for-book-title selected-book)
+        pages-model (.getModel pagelist)]
+
+    (.removeAllElements pages-model)
+    (doseq [page pages]
+      (.addElement pages-model page))
+    (update-docs-panel docs-pane pagelist edit-checkbox)))
 
 (defn update-cahiers
   "Update the list after a book was renamed.

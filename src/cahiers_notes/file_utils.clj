@@ -57,11 +57,20 @@
       (catch Exception e
         (.printStackTrace e)))))
 
-(defn- move-folder 
+(defn create-file
+  "Create an empty text file in the given path-file with the given title with .txt added"
+  [folder-file title]
+  (println "Folder file" folder-file)
+  (let [path-file (io/file (str (.getAbsolutePath folder-file) "/" title ".txt"))]
+    (spit path-file "")
+    path-file))
+
+
+(defn- move-folder
   "Move the folder to the new name in the same root.
    Return the new folder-file"
   [folder-file new-name]
-    (let [nio-path (Paths/get (.getAbsolutePath folder-file) (into-array String []))
+  (let [nio-path (Paths/get (.getAbsolutePath folder-file) (into-array String []))
         parent (.getParent nio-path)
         new-nio-path (Paths/get (str parent "/" new-name) (into-array String []))]
     (Files/move nio-path new-nio-path (into-array java.nio.file.CopyOption []))))
@@ -76,18 +85,15 @@
     (let [newpath-file (move-folder current-folder new-name)]
       {:success newpath-file})
     (catch Exception e
-      {:error (str "Impossible de renommer ce" 
+      {:error (str "Impossible de renommer ce"
                    " cahier sur le disque. Le nom doit être un nom"
                    " de répertoire valide.n" (.getMessage e))})))
 
-(comment 
-  (def source-folder-file (io/file "/home/michel/Downloads/TEMP"))    
+(comment
+  (def source-folder-file (io/file "/home/michel/Downloads/TEMP"))
   (def new-name "TEMP2")
   (let [nio-path (Paths/get (.getAbsolutePath source-folder-file) (into-array String []))
         parent (.getParent nio-path)
-        new-nio-path (Paths/get (str parent "/" new-name) (into-array String []))
-        ]
-    (Files/move nio-path new-nio-path (into-array java.nio.file.CopyOption []))
-    )
-  (rename-cahier-folder source-folder-file "*/!")
-  )
+        new-nio-path (Paths/get (str parent "/" new-name) (into-array String []))]
+    (Files/move nio-path new-nio-path (into-array java.nio.file.CopyOption [])))
+  (rename-cahier-folder source-folder-file "*/!"))

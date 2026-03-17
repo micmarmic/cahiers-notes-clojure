@@ -35,6 +35,11 @@
      true
      false)))
 
+(defn add-page-to-book [current-book new-page]
+  (let [new-pages (conj (:pages current-book) new-page)]
+  (reset! books (assoc-in @books [(:id current-book) :pages] new-pages))))
+
+
 
 
 (comment
@@ -91,6 +96,10 @@
   "Return the book for the title or nil if not found"
   [title]
   (first (filter #(= title (:title %)) (vals @books))))
+
+(defn pages-for-book-title
+  [book-title]
+  (:pages (book-for-title book-title)))
 
 (defn update-book-title-path
   "Update the title and path of a book and return it"

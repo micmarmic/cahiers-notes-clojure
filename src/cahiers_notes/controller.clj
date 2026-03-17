@@ -4,7 +4,9 @@
    [cahiers-notes.file-utils :as files]
    [cahiers-notes.views.gui-utils :as gui]
    [clojure.java.io :as io]
-   [clojure.pprint :as pprint])
+   [clojure.pprint :as pprint]
+   [clojure.pprint :as pp]
+   [cahiers-notes.views.gui-utils :as utils])
   (:import
    [java.io FileNotFoundException]
    [javax.swing JOptionPane]))
@@ -22,28 +24,25 @@
         {:success "OK"}))))
 
 (defn add-page
+  "Try to add a new text file to the page folder, update the GUI and database.
+   No return. Pop a message if there's an error."
   [booklist pagelist _docs-pane _callback]
   (when (not (nil?  (.getSelectedValue booklist)))
-    (let [book-title (.getSelectedValue booklist)
+    (let [current-book (data/book-for-title (.getSelectedValue booklist))
           new-page-title (JOptionPane/showInputDialog "Titre: ")
-          pagemodel (.getModel pagelist)]
-          (when (not= nil new-page-title)
-          (cond (data/page-title-exists? new-page-title)
-                (gui/show-error "Ce titre de page existe déjà!")
-                :else
-                (println "TODO ADD PAGE '" new-page-title "' to book '" book-title)
-                ;; 
-                ;; (let [new-subfolder-result (files/create-subfolder
-                ;;                             @data/root-folder
-                ;;                             title)]
-                ;;   (if (:error new-subfolder-result)
-                ;;     (gui/show-error (:error new-subfolder-result))
-                ;;     (if-not (data/add-cahier (:success new-subfolder-result))
-                ;;       (gui/show-error "Ce titre de livre existe déjà!")
-                ;;       (do
-                ;;         (.addElement pagemodel title)
-                ;;         (.setSelectedIndex pagemodel (dec (.getSize pagemodel)))))))
-                        )))))
+          pages-model (.getModel pagelist)]
+      (when (not= nil new-page-title)
+        (cond (data/page-title-exists? new-page-title)
+              (gui/show-error "Ce titre de page existe déjà!")
+              :else
+              ;; currently no error checking on file creation
+              (let [page-file
+                    (files/create-file (:path current-book) new-page-title)
+                    new-page {:id (data/make-guid)
+                              :title (str new-page-title ".txt") :path page-file}]
+                (data/add-page-to-book current-book new-page)
+                (.addElement pages-model new-page)
+                (.setSelectedIndex pagelist (dec (.getSize pages-model)))))))))
 
 (defn rename-page
   [_pagelist _callback])
@@ -53,7 +52,7 @@
    Refresh GUI.
    Display a messagebox if there is an error"
   [booklist]
-  (let [title (JOptionPane/showInputDialog "Titre: ")        
+  (let [title (JOptionPane/showInputDialog "Titre: ")
         bookmodel (.getModel booklist)]
     ;; TODO validate title: no unlawful chars - it's also a path name
     (when (not= nil title)
@@ -88,7 +87,7 @@
               (if-not (data/rename-cahier current-title new-title)
                 (gui/show-error "Impossible de renommer ce cahier.")
                 (do
-                  (swap! data/books assoc (:id current-book) 
+                  (swap! data/books assoc (:id current-book)
                          (data/update-book-title-path current-book new-title (:success new-subfolder-result)))
                   (pprint/pprint @data/books)
                   (gui-update-fn booklist new-title))))))))))
@@ -103,7 +102,6 @@
       (let [message (str "Impossible de lire cette page:\n" e)]
         (gui/show-error message)))))
 
-(comment 
+(comment
   (def file (io/file "/home/michel/veraencrypted/Chiffré/DATA_FOR_APPS/CahiersProd/Programmation/pyinstaller.txt"))
-  (file-contents file)
-  )
+  (file-contents file))
