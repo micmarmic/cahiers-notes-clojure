@@ -1,13 +1,13 @@
-(ns cahiers-notes.views.gui-utils 
+(ns cahiers-notes.views.gui-utils
   (:import
-   [javax.swing JOptionPane]
    [java.awt GraphicsEnvironment]
-   [java.awt.event ActionListener]
+   [java.awt.event ActionListener WindowListener]
+   [javax.swing JOptionPane]
    [javax.swing ListCellRenderer]
    [javax.swing.event ListSelectionListener]))
 
 
-(defn show-error 
+(defn show-error
   "Display the message dialog."
   [error-message]
   (JOptionPane/showMessageDialog nil error-message "Oops!" JOptionPane/ERROR_MESSAGE))
@@ -21,7 +21,7 @@
         width (.getWidth (.getDisplayMode gd))
         height (.getHeight (.getDisplayMode gd))
         x (/ (- width frame-width) 2)
-        y (/ (- height frame-height) 2)] 
+        y (/ (- height frame-height) 2)]
     {:x x :y y}))
 
 (defn title-for-item
@@ -60,7 +60,18 @@
        [_ _]
        (callback)))))
 
-;; TODO: this may be a generic action listener suitable for all widgets ...
+
 (defn add-action-listener
   [widget callback]
   (.addActionListener widget (reify ActionListener (actionPerformed [_ _] (callback)))))
+
+(defn add-window-listener
+  [frame callback]
+  (println callback)
+  (.addWindowListener
+   frame
+   (reify WindowListener
+     (windowOpened [_ _]) ; nothing to do
+     (windowActivated [_ _]) ; nothing to do
+     (windowClosing [_ _] (callback))))
+  )

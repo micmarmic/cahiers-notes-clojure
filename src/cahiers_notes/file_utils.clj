@@ -58,7 +58,8 @@
         (.printStackTrace e)))))
 
 (defn create-file
-  "Create an empty text file in the given path-file with the given title with .txt added"
+  "Create an empty text file in the given path-file with the given title with .txt added.
+   The caller must catch exceptions!"
   [folder-file title]
   (println "Folder file" folder-file)
   (let [path-file (io/file (str (.getAbsolutePath folder-file) "/" title ".txt"))]

@@ -48,13 +48,11 @@
                :book3 {:title "Title 3" :pages [{:title "toto"}]} 
                :book4 {:title "Title 4" :pages [{:title "robo"}]}}
         title "Title 5"]
-    (require '[clojure.pprint :as pp])
     (book-title-exists? title books))
 
   (let [books {:book1 {:pages [{:title "allo"}]} :book2 {:pages [{:title "love"}]}
                :book3 {:pages [{:title "toto"}]} :book4 {:pages [{:title "robo"}]}}
         title "toao"]
-    (require '[clojure.pprint :as pp])
     (if (seq (filter #(= (:title %) title) (flatten (map :pages (vals books)))))
       true
       false))

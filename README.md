@@ -10,8 +10,19 @@ Installer le fichier .jar en format uberjar à l'endroit désiré.
 
     $ java -jar cahiers-notes-0.1.0-standalone.jar [dossier-principal]
 
+
+## Sauvegarde automatique
+
+Dès qu'un document est mis en mode "édit", l'appli sauvegardera le texte lors d'un des événements suivants:
+- on enlève la coche "Modifier" pour mettre le document en mode affichage seulement
+- une autre page est sélectionné ou un autre livre est selectinné; ceci arrivera automatiquement lorsque qu'on ajoutera un cahier ou une page
+- lorsque que l'application terminera de façon normale
+
+ATTENTION: Si l'application plante ou est terminée de force par l'utilisateur, les changements seront perdus
+
 ## TODO
 - titre "Input" de showInputDialog => créer le mien?
+- SORT cahiers and pages in lists
 
 ## License
 
