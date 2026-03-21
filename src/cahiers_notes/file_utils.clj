@@ -1,7 +1,9 @@
 (ns cahiers-notes.file-utils
-  (:import [java.nio.file Files Paths])
-  (:require [clojure.java.io :as io]
-            [cahiers-notes.data :as data]))
+  (:require
+   [cahiers-notes.data :as data]
+   [clojure.java.io :as io])
+  (:import
+   [java.nio.file Files Paths]))
 
 (defn file-not-dot?
   "Given a File, return true if it's a file and the
@@ -29,6 +31,8 @@
   "Given io/file root folder, return a seq of the sub-directories it contains."
   [root-file]
   (let [sub-dirs (filter directory-not-dot? (.listFiles root-file))]
+    (doseq [dir sub-dirs]
+      (println (.getName dir)))
     (loop [dirs sub-dirs
            books {}]
       (if (empty? dirs) books
@@ -61,9 +65,8 @@
   "Create an empty text file in the given path-file with the given title with .txt added.
    The caller must catch exceptions!"
   [folder-file title]
-  (println "Folder file" folder-file)
   (let [path-file (io/file (str (.getAbsolutePath folder-file) "/" title ".txt"))]
-    (spit path-file "")
+    (spit path-file ""  :encoding "UTF-8")
     path-file))
 
 
@@ -89,12 +92,3 @@
       {:error (str "Impossible de renommer ce"
                    " cahier sur le disque. Le nom doit être un nom"
                    " de répertoire valide.n" (.getMessage e))})))
-
-(comment
-  (def source-folder-file (io/file "/home/michel/Downloads/TEMP"))
-  (def new-name "TEMP2")
-  (let [nio-path (Paths/get (.getAbsolutePath source-folder-file) (into-array String []))
-        parent (.getParent nio-path)
-        new-nio-path (Paths/get (str parent "/" new-name) (into-array String []))]
-    (Files/move nio-path new-nio-path (into-array java.nio.file.CopyOption [])))
-  (rename-cahier-folder source-folder-file "*/!"))

@@ -2,7 +2,7 @@
   (:import
    [java.awt GraphicsEnvironment]
    [java.awt.event ActionListener WindowListener]
-   [javax.swing JOptionPane]
+   [javax.swing AbstractAction JOptionPane]
    [javax.swing ListCellRenderer]
    [javax.swing.event ListSelectionListener]))
 
@@ -58,7 +58,9 @@
    (reify ListSelectionListener
      (valueChanged
        [_ _]
-       (callback)))))
+       ; process when change is done else it is done twice
+       (when (.getValueIsAdjusting (.getSelectionModel listbox))
+         (callback))))))
 
 
 (defn add-action-listener
@@ -67,11 +69,10 @@
 
 (defn add-window-listener
   [frame callback]
-  (println callback)
   (.addWindowListener
    frame
    (reify WindowListener
      (windowOpened [_ _]) ; nothing to do
      (windowActivated [_ _]) ; nothing to do
-     (windowClosing [_ _] (callback))))
-  )
+     (windowDeactivated [_ _]) ; nothing to do
+     (windowClosing [_ _] (callback)))))

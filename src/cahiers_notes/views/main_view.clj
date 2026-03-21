@@ -3,6 +3,7 @@
    [cahiers-notes.controller :as controller]
    [cahiers-notes.data :as data]
    [cahiers-notes.views.gui-utils :as utils]
+   [clojure.string :as str]
    [markdown-viewer.lib.markdown-panel :as md])
   (:import
    [java.awt
@@ -11,6 +12,7 @@
     Dimension
     FlowLayout]
    [javax.swing
+    AbstractAction
     BorderFactory
     DefaultListModel
     JButton
@@ -27,77 +29,83 @@
     JTextPane]
    [javax.swing.border EmptyBorder]))
 
-(def TITLE "Cahiers")
+(def TITLE "Cahiers de notes")
 (def FRAME-WIDTH 1200)
 (def FRAME-HEIGHT 800)
 (def CAHIER_WIDTH 300)
 (def PAGES_WIDTH 300)
 (def FRAME_BG_COLOR (Color. 206 187 66))
+(def BUTTON-PANEL-DIMENSION (Dimension. 100 40))
 
 (defn add-menus
-  [frame pagelist docs-pane]
+  [frame pagelist docs-pane edit-check-box]
   (let [menu-bar (JMenuBar.)
-        file-menu (JMenu. "File")
-        file-exit (JMenuItem. "Exit")
+        file-menu (JMenu. "Fichiers")
+        file-exit (JMenuItem. "Quitter")
+        edit-menu (JMenu. "Éditer")
+        edit-toggle (JMenuItem. "Changer mode édition")
         separator (JSeparator.)]
     (.setJMenuBar frame menu-bar)
     (.add menu-bar file-menu)
     (doto file-menu
       (.add  separator)
       (.add  file-exit))
+    (.add menu-bar edit-menu)
+    (.add edit-menu edit-toggle)
+
+
+    
+
+
+    (utils/add-action-listener edit-toggle #(controller/menu-toggle-edit pagelist docs-pane edit-check-box))
     (utils/add-action-listener file-exit #(controller/close-app frame pagelist docs-pane))))
 
-(defn update-docs-panel [docs-pane pagelist edit-checkbox]
+(defn update-docs-panel [pagelist docs-pane edit-checkbox]
   (let [selected-page (.getSelectedValue pagelist)
         edit? (.isSelected edit-checkbox)]
 
-    (println "UPDATE DOC")
-    ; manage editing-state and page content
-    (let [selected-page (.getSelectedValue pagelist)]
-      (println "update-docs-panel selected page is"
-               (if (nil? selected-page) "nil" "not nil")
-               "and the editing state is" @controller/editing-state)
-      (when (and selected-page @controller/editing-state)
-        (controller/save-page (:path selected-page) (.getText docs-pane))))
+    (println "-=-------------------------")
+    (println "update-docs-panel" (.getText docs-pane) (.getSelectedValue pagelist))
 
-    (controller/set-editing-state edit?)
-    (.setEditable docs-pane edit?)
-    (md/clear-document docs-pane)
-    
+
+
     ; load the file AFTER the save (or not) above
     (let [contents-result (if (not= selected-page nil)
                             (controller/file-contents (:path selected-page))
                             {:success ""})
-          contents (:success contents-result)]
-      (println "update-docs-panel result" contents-result "contents" contents)
-      (when (not (:error contents-result))
-          (if edit?
-            (do
-              (md/clear-all-styles docs-pane)
-              (.setText docs-pane contents))
-            (md/add-text docs-pane contents))))))
+          contents (:success contents-result)
+          error (:error contents-result)]
+      (println "contents:" contents)
+      (when error 
+        (println "ERROR:" error))
 
-(defn update-pages [booklist pagelist docs-pane  edit-checkbox]
-  (println "UPDATE PAGES")
+      (when (not (:error contents-result))
+        (md/clear-all-styles docs-pane)
+        (md/clear-document docs-pane)
+        (if edit?
+          (.setText docs-pane contents)
+          (md/add-text docs-pane contents))))))
+ 
+
+(defn update-pages [booklist pagelist docs-pane edit-checkbox]
        ; manage editing-state and page content
   (let [selected-page (.getSelectedValue pagelist)]
-    (println "update-cahiers selected page is"
-             (if (nil? selected-page) "nil" "not nil")
-             "and the editing state is" @controller/editing-state)
     (when (and selected-page @controller/editing-state)
-      (controller/save-page (:path selected-page) (.getText docs-pane)))
-    (controller/clear-edit-checkbox-and-state edit-checkbox)
-    (controller/save-doc-disable-edit pagelist docs-pane edit-checkbox)
-    )
+      (when (not= selected-page @controller/current-page)
+        (controller/clear-edit-checkbox-and-state edit-checkbox)
+        (controller/save-page (:path selected-page) (.getText docs-pane))
+        (controller/save-doc-disable-edit pagelist docs-pane edit-checkbox)))
+    (controller/set-current-page selected-page))
   
+  (md/clear-document docs-pane)
 
-  (let [selected-book (.getSelectedValue booklist)        
-        pages (data/pages-for-book-title selected-book)
+  (let [selected-book (.getSelectedValue booklist)
+        pages (sort-by #(str/lower-case (:title %)) (data/pages-for-book-title selected-book))
         pages-model (.getModel pagelist)]
     (.removeAllElements pages-model)
     (doseq [page pages]
       (.addElement pages-model page))
-    (update-docs-panel docs-pane pagelist edit-checkbox)))
+    (update-docs-panel pagelist docs-pane edit-checkbox)))
 
 (defn update-cahiers
   "Update the list after a book was renamed.
@@ -109,7 +117,7 @@
    (let [book-names (data/book-titles)
          model (.getModel booklist)]
      (.removeAllElements model)
-     (doseq [name book-names]
+     (doseq [name (sort-by #(str/lower-case %) book-names)]
        (.addElement model name))
      (when (not= title "")
        (.setSelectedValue booklist title true)
@@ -163,6 +171,7 @@
     (.setLayout cahier-button-panel (FlowLayout.))
     (doto
      cahier-button-panel
+      (.setPreferredSize BUTTON-PANEL-DIMENSION)
       (.add add-cahier-button)
       (.add rename-cahier-button))
 
@@ -180,13 +189,17 @@
 
 
     (doto pages-button-panel
+      (.setPreferredSize BUTTON-PANEL-DIMENSION)
       (.setLayout (FlowLayout.))
       (.add add-page-button)
       (.add rename-page-button))
 
     (doto edit-panel
-      (.add (JLabel. "Éditer?"))
+      (.setPreferredSize BUTTON-PANEL-DIMENSION)
+      (.add (JLabel. "Éditer"))
       (.add edit-checkbox))
+    
+    (.setEditable docs-pane false)
 
     (doto docs-scroll
       (.setVerticalScrollBarPolicy JScrollPane/VERTICAL_SCROLLBAR_ALWAYS)
@@ -195,29 +208,30 @@
     ;; (doto docs-pane
     ;;   (.setLineWrap true)
     ;;   (.setWrapStyleWord true))
-    
+
     (doto docs-panel
+      (.setBorder (BorderFactory/createLineBorder Color/BLACK))
       (.setLayout (BorderLayout.))
-      (.add edit-panel BorderLayout/NORTH)
+      (.add edit-panel BorderLayout/SOUTH)
       (.add docs-scroll BorderLayout/CENTER))
         ;(.add docs-pane BorderLayout/CENTER)
-    
+
 
     ;; restrain the width of the docs-pane
-    (.setPreferredSize docs-pane (Dimension. 100 100))
-    (.setSize docs-pane (Dimension. 100 100))
+    ;; (.setPreferredSize docs-pane (Dimension. 100 100))
+    ;; (.setSize docs-pane (Dimension. 100 100))
 
     (.add main-panel docs-panel FlowLayout/CENTER)
 
 
     ;; callbacks
     (utils/add-window-listener
-     frame 
+     frame
      #(controller/close-app frame pagelist docs-pane))
 
     (utils/add-listbox-listener
      booklist
-     #(update-pages booklist pagelist docs-pane  edit-checkbox))
+     #(update-pages booklist pagelist docs-pane edit-checkbox))
 
     (utils/add-action-listener
      add-cahier-button
@@ -238,11 +252,11 @@
     (utils/add-action-listener
      edit-checkbox
        ; simulate a change to the page selection to redisplay the page
-     #(update-docs-panel docs-pane pagelist edit-checkbox))
+     #(controller/check-box-clicked pagelist docs-pane edit-checkbox))
 
     (utils/add-listbox-listener
      pagelist
-     #(update-docs-panel docs-pane pagelist edit-checkbox))
+     #(controller/page-selected pagelist docs-pane edit-checkbox))
 
 
     ;; (.addActionListener
@@ -250,12 +264,12 @@
     ;;  (reify ActionListener
     ;;    (actionPerformed [_ _]
     ;;      (fill-cahiers-panel cahiers-panel pages-panel docs-pane edit-checkbox))))
-    
+
     ;; initial update
     (update-cahiers booklist pagelist docs-pane  edit-checkbox)
 
     ;; finish frame configuratin and display it
-    (add-menus frame pagelist docs-pane)
+    (add-menus frame pagelist docs-pane edit-checkbox)
     (doto frame
       (.setBackground FRAME_BG_COLOR)
       (.setDefaultCloseOperation JFrame/DO_NOTHING_ON_CLOSE)
