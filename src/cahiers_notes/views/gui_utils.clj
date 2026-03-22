@@ -2,7 +2,8 @@
   (:import
    [java.awt GraphicsEnvironment]
    [java.awt.event ActionListener WindowListener]
-   [javax.swing AbstractAction JOptionPane]
+   [javax.swing JOptionPane]
+   [customdialog CustomInputDialog]
    [javax.swing ListCellRenderer]
    [javax.swing.event ListSelectionListener]))
 
@@ -76,3 +77,13 @@
      (windowActivated [_ _]) ; nothing to do
      (windowDeactivated [_ _]) ; nothing to do
      (windowClosing [_ _] (callback)))))
+
+(defn inputFromUser
+  "Display a custom user input dialog"
+  ([dialog-title prompt]
+   (inputFromUser dialog-title prompt ""))
+  ([dialog-title prompt current-value]
+    ; demo dialog
+  (let [dialog (CustomInputDialog. nil dialog-title prompt current-value)
+        inputValue (.showDialog dialog)]
+    inputValue)))

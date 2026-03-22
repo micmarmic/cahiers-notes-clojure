@@ -8,6 +8,7 @@
   :target-path "target/%s" 
   :source-paths ["src" "../markdown-viewer/src"]
   :java-source-paths ["src/localjava"]
-  :compile-path "target/classes"
+  :compile-path "target/classes" 
+  :resource-paths ["resources"]
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})

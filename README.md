@@ -26,9 +26,11 @@ ATTENTION: Si l'application plante ou est terminée de force par l'utilisateur, 
 -- open a page with text
 -- then select a page with no text: the new page seems to take on the text from the first page
 
+## Composantes
+
+- le dialogue pour saisir les titres de pages et cahiers est en java dans src/localjava parce que les exemples sont simples et abondants; le fichier project.clj en tient compte
+
 ## TODO
-- titre "Input" de showInputDialog => créer le mien?
-- add menu and key binding for edit like CTRL+E
 - add About that explains command line and auto save
 - fix issue with .txt extension for pages: title has no .txt, path does by default
 - add app icon
@@ -70,7 +72,6 @@ ATTENTION: Si l'application plante ou est terminée de force par l'utilisateur, 
 ### Select page
 - with doc open
 - without doc open
-
 
 ## License
 

@@ -84,9 +84,9 @@
 
 
 (defn menu-toggle-edit
-  [pagelist docs-pane edit-checkbox]
-  (when (.getSelectedValue pagelist)
-    (println "menu toggle edit")))
+  [edit-checkbox]
+  (println "menu toggle edit")
+  (.doClick edit-checkbox))
 
 (defn check-box-clicked
   "Process actions required when edit-check-box is clicked"
@@ -134,8 +134,8 @@
    No return. Pop a message if there's an error."
   [booklist pagelist _docs-pane _callback]
   (when (not (nil?  (.getSelectedValue booklist)))
-    (let [current-book (data/book-for-title (.getSelectedValue booklist))
-          new-page-title (JOptionPane/showInputDialog "Titre: ")]
+    (let [current-book (data/book-for-title (.getSelectedValue booklist))          
+          new-page-title (gui/inputFromUser "Ajouter une page" "Titre:")]
       (when (not= nil new-page-title)
         (cond (data/page-title-exists? new-page-title)
               (gui/show-error "Ce titre de page existe déjà!")
@@ -156,8 +156,6 @@
                         "\n"
                         (.getMessage e))))))))))
 
-
-
 (defn rename-page
   [_pagelist _callback])
 
@@ -166,7 +164,7 @@
    Refresh GUI.
    Display a messagebox if there is an error"
   [booklist]
-  (let [title (JOptionPane/showInputDialog "Titre: ")
+  (let [title (gui/inputFromUser "Ajouter un cahier" "Titre: ")
         bookmodel (.getModel booklist)]
     ;; TODO validate title: no unlawful chars - it's also a path name
     (when (not= nil title)
@@ -196,8 +194,7 @@
       ;; before renaming the folder else the save will fail
       (save-doc-disable-edit pagelist docs-pane edit-checkbox)
 
-
-      (let [new-title (JOptionPane/showInputDialog "Titre: " current-title)]
+      (let [new-title (gui/inputFromUser "Renommer un cahier" "Titre: " current-title)]
         (when (not= nil new-title)
           (let [new-subfolder-result (files/rename-cahier-folder
                                       (:path current-book)

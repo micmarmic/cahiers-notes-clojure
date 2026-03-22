@@ -4,19 +4,17 @@
    [cahiers-notes.controller :as controller]
    [cahiers-notes.views.gui-utils :as gui]
    [cahiers-notes.views.main-view :as mainview])
-  (:import
-   [src.localjava Hello]
+  (:import 
    [javax.swing SwingUtilities]))
 
 (defn -main
-  "I don't do a whole lot ... yet."
+  "Main entry point for the application"
   []
-  (println "Demo local java - here's the text:" (Hello/getHello))
   (println "Application Cahiers de note")
   ;; TODO: don't hard-code root path
-  (let [result 
+  (let [result
         (controller/init-books "/home/michel/veraencrypted/Chiffré/DATA_FOR_APPS/CahiersProd-NOT")
-        ; (controller/init-books "/home/michel/Documents/Cahiers")
+                 ; (controller/init-books "/home/michel/Documents/Cahiers")
         error-message (:error result)]
     (if-not error-message
       (SwingUtilities/invokeLater mainview/create-and-show-gui)

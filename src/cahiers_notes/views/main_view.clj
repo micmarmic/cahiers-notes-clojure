@@ -4,6 +4,7 @@
    [cahiers-notes.data :as data]
    [cahiers-notes.views.gui-utils :as utils]
    [clojure.string :as str]
+   [clojure.java.io :as io]
    [markdown-viewer.lib.markdown-panel :as md])
   (:import
    [java.awt
@@ -11,8 +12,9 @@
     Color
     Dimension
     FlowLayout]
+   [java.awt.event ActionEvent KeyEvent]
+   [javax.imageio ImageIO]
    [javax.swing
-    AbstractAction
     BorderFactory
     DefaultListModel
     JButton
@@ -26,7 +28,8 @@
     JPanel
     JScrollPane
     JSeparator
-    JTextPane]
+    JTextPane
+    KeyStroke]
    [javax.swing.border EmptyBorder]))
 
 (def TITLE "Cahiers de notes")
@@ -47,17 +50,17 @@
         separator (JSeparator.)]
     (.setJMenuBar frame menu-bar)
     (.add menu-bar file-menu)
+    (.add menu-bar edit-menu)
+
     (doto file-menu
       (.add  separator)
       (.add  file-exit))
-    (.add menu-bar edit-menu)
-    (.add edit-menu edit-toggle)
-
-
     
+    (.add edit-menu edit-toggle)
+    
+    (.setAccelerator edit-toggle (KeyStroke/getKeyStroke KeyEvent/VK_E, ActionEvent/CTRL_MASK))    
 
-
-    (utils/add-action-listener edit-toggle #(controller/menu-toggle-edit pagelist docs-pane edit-check-box))
+    (utils/add-action-listener edit-toggle #(controller/menu-toggle-edit edit-check-box))
     (utils/add-action-listener file-exit #(controller/close-app frame pagelist docs-pane))))
 
 (defn update-docs-panel [pagelist docs-pane edit-checkbox]
@@ -147,7 +150,8 @@
         bookmodel (DefaultListModel.)
         booklist (JList. bookmodel)
         pagemodel (DefaultListModel.)
-        pagelist (JList. pagemodel)]
+        pagelist (JList. pagemodel)
+        book-icon (ImageIO/read (io/resource "book-icon.jpg"))]
 
     (doto main-panel
       (.setBackground FRAME_BG_COLOR)
@@ -198,7 +202,7 @@
       (.setPreferredSize BUTTON-PANEL-DIMENSION)
       (.add (JLabel. "Éditer"))
       (.add edit-checkbox))
-    
+
     (.setEditable docs-pane false)
 
     (doto docs-scroll
@@ -270,7 +274,9 @@
 
     ;; finish frame configuratin and display it
     (add-menus frame pagelist docs-pane edit-checkbox)
+
     (doto frame
+      (.setIconImage book-icon)
       (.setBackground FRAME_BG_COLOR)
       (.setDefaultCloseOperation JFrame/DO_NOTHING_ON_CLOSE)
       (.setResizable true)
